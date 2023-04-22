@@ -9,9 +9,8 @@ from models.pose_transfer_model import PoseTransferModel
 
 # configurations
 # -----------------------------------------------------------------------------
-root_path = 'D:/LjmuMSc/Projects/Github/Z_Clone_multi_scale_attention/pose2pose'
-# root_path = 'D:\LjmuMSc\Projects\Github\Z_Clone_multi_scale_attention\pose2pose\datasets\DeepFashion'
-dataset_name = 'DeepFashion/'
+root_path = 'D:/LjmuMSc/Projects/Github/PoseTransfer_MS_RnD'
+dataset_name = 'deepfashion/'
 
 dataset_root = f'{root_path}/datasets/{dataset_name}'
 img_pairs_train = f'{dataset_root}/train_img_pairs.csv'
@@ -21,8 +20,8 @@ pose_maps_dir_test = f'{dataset_root}/test_pose_maps'
 
 gpu_ids = [0]
 
-batch_size_train = 2
-batch_size_test = 2
+batch_size_train = 4
+batch_size_test = 4
 n_epoch = 1
 out_freq = 500
 
@@ -31,13 +30,9 @@ ckpt_dir = None
 
 run_info = ''
 out_path = f'{root_path}/output/{dataset_name}'
+
+
 # -----------------------------------------------------------------------------
-
-from pathlib import Path
-
-print(Path(dataset_root))
-
-
 # create timestamp and infostamp
 timestamp = datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
 infostamp = f'_{run_info.strip()}' if run_info.strip() else ''
