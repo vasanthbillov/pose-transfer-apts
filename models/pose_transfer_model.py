@@ -17,7 +17,7 @@ class PoseTransferModel(BaseModel):
         
         self.setup(verbose=True)
         
-        self.netG = NetG(3, 36, 3)
+        self.netG = NetG(3, 36, 6, 3)
         self.netD = NetD(6)
         
         self.init_networks(verbose=True)
@@ -33,12 +33,15 @@ class PoseTransferModel(BaseModel):
     def set_inputs(self, inputs):
         self.real_img_A = inputs['imgA'].to(self.device)
         self.real_img_B = inputs['imgB'].to(self.device)
+        self.real_img_A_seg = inputs['imgA_seg'].to(self.device)
+        self.real_img_B_seg = inputs['imgB_seg'].to(self.device)
         self.real_map_A = inputs['mapA'].to(self.device)
         self.real_map_B = inputs['mapB'].to(self.device)
     
     def forward(self):
         real_map_AB = torch.cat((self.real_map_A, self.real_map_B), dim=1)
-        self.fake_img_B = self.netG(self.real_img_A, real_map_AB)
+        real_seg_AB = torch.cat((self.real_img_A_seg, self.real_img_B_seg), dim=1)
+        self.fake_img_B = self.netG(self.real_img_A, real_map_AB, real_seg_AB )
     
     def backward_D(self):
         fake_img_AB = torch.cat((self.real_img_A, self.fake_img_B), dim=1)
@@ -81,8 +84,9 @@ class PoseTransferModel(BaseModel):
         mode = self.netG.training
         self.netG.eval()
         real_map_AB = torch.cat((self.real_map_A, self.real_map_B), dim=1)
+        real_seg_AB = torch.cat((self.real_img_A_seg, self.real_img_B_seg), dim=1)
         with torch.no_grad():
-            self.fake_img_B = self.netG(self.real_img_A, real_map_AB)
+            self.fake_img_B = self.netG(self.real_img_A, real_map_AB, real_seg_AB)
         real_img_A = torchvision.utils.make_grid(self.real_img_A.detach().cpu(), nrow=1, normalize=True)
         real_img_B = torchvision.utils.make_grid(self.real_img_B.detach().cpu(), nrow=1, normalize=True)
         fake_img_B = torchvision.utils.make_grid(self.fake_img_B.detach().cpu(), nrow=1, normalize=True)

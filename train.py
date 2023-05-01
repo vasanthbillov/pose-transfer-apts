@@ -10,19 +10,20 @@ from models.pose_transfer_model import PoseTransferModel
 # configurations
 # -----------------------------------------------------------------------------
 root_path = 'D:/LjmuMSc/Projects/Github/PoseTransfer_MS_RnD'
-dataset_name = 'deepfashion/'
+dataset_name = 'deepfashion'
 
-dataset_root = f'{root_path}/datasets/{dataset_name}'
-img_pairs_train = f'{dataset_root}/train_img_pairs.csv'
-img_pairs_test = f'{dataset_root}/test_img_pairs.csv'
+dataset_root = f'{root_path}/datasets/{dataset_name}/'
+img_pairs_train = f'{dataset_root}/train_img_pairs1.csv'
+img_pairs_test = f'{dataset_root}/test_img_pairs1.csv'
 pose_maps_dir_train = f'{dataset_root}/train_pose_maps'
 pose_maps_dir_test = f'{dataset_root}/test_pose_maps'
+
 
 gpu_ids = [0]
 
 batch_size_train = 4
 batch_size_test = 4
-n_epoch = 1
+n_epoch = 10
 out_freq = 500
 
 ckpt_id = None

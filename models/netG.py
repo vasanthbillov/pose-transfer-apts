@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from torchsummary import summary
+
 
 def conv1x1(in_channels, out_channels):
     return nn.Conv2d(in_channels, out_channels, 1, 1, 0, bias=False)
@@ -38,8 +40,10 @@ class ResidualBlock(nn.Module):
 
 class NetG(nn.Module):
     
-    def __init__(self, in1_channels, in2_channels, out_channels, ngf=64):
+    def __init__(self, in1_channels, in2_channels,in3_channels, out_channels, ngf=64):
         super(NetG, self).__init__()
+
+        
         
         self.in1_conv1 = self.inconv(in1_channels, ngf)
         self.in1_down1 = self.down2x(ngf, ngf*2)
@@ -52,6 +56,12 @@ class NetG(nn.Module):
         self.in2_down2 = self.down2x(ngf*2, ngf*4)
         self.in2_down3 = self.down2x(ngf*4, ngf*8)
         self.in2_down4 = self.down2x(ngf*8, ngf*16)
+
+        self.in3_conv1 = self.inconv(in3_channels, ngf)
+        self.in3_down1 = self.down2x(ngf, ngf*2)
+        self.in3_down2 = self.down2x(ngf*2, ngf*4)
+        self.in3_down3 = self.down2x(ngf*4, ngf*8)
+        self.in3_down4 = self.down2x(ngf*8, ngf*16)
         
         self.out_up1 = self.up2x(ngf*16, ngf*8)
         self.out_up2 = self.up2x(ngf*8, ngf*4)
@@ -92,26 +102,45 @@ class NetG(nn.Module):
             ResidualBlock(out_channels)
         )
     
-    def forward(self, x1, x2):
+    def forward(self, x1, x2, x3):
+        print(x1.shape)
+        print(x2.shape)
+        print(x3.shape)
         x1_c1 = self.in1_conv1(x1)
         x1_d1 = self.in1_down1(x1_c1)
         x1_d2 = self.in1_down2(x1_d1)
         x1_d3 = self.in1_down3(x1_d2)
         x1_d4 = self.in1_down4(x1_d3)
         
+        # Heat maps(joints)
         x2_c1 = self.in2_conv1(x2)
         x2_d1 = self.in2_down1(x2_c1)
         x2_d2 = self.in2_down2(x2_d1)
         x2_d3 = self.in2_down3(x2_d2)
         x2_d4 = self.in2_down4(x2_d3)
+
+        # Parsing maps
+        x3_c1 = self.in3_conv1(x3)
+        x3_d1 = self.in3_down1(x3_c1)
+        x3_d2 = self.in3_down2(x3_d1)
+        x3_d3 = self.in3_down3(x3_d2)
+        x3_d4 = self.in3_down4(x3_d3)
         
-        y = x1_d4 * torch.sigmoid(x2_d4)
+        y = (x1_d4 * torch.sigmoid(x2_d4)) * torch.sigmoid(x3_d4)
         y = self.out_up1(y)
-        y = y * torch.sigmoid(x2_d3)
+        y = (y * torch.sigmoid(x2_d3)) * torch.sigmoid(x3_d3)
         y = self.out_up2(y)
-        y = y * torch.sigmoid(x2_d2)
+        y = (y * torch.sigmoid(x2_d2)) * torch.sigmoid(x3_d2)
         y = self.out_up3(y)
-        y = y * torch.sigmoid(x2_d1)
+        y = (y * torch.sigmoid(x2_d1)) * torch.sigmoid(x3_d1)
         y = self.out_up4(y)
         y = self.out_conv1(y)
+
+        print('y shape: ', y.shape)
         return y
+
+
+
+if __name__=='__main__':
+    netG = NetG(3, 36, 6, 3)
+    summary(netG)
