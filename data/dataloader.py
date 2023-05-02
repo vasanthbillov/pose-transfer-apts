@@ -71,12 +71,12 @@ if __name__=='__main__':
     import torch
 
 
-    root_path = 'D:/LjmuMSc/Projects/Github/PoseTransfer_MS_RnD'
+    root_path = '/home/ec2-user/SageMaker'
     dataset_name = 'deepfashion'
 
     dataset_root = f'{root_path}/datasets/{dataset_name}'
     img_pairs_train = f'{dataset_root}/train_img_pairs1.csv'
-    img_pairs_test = f'{dataset_root}/test_img_pairs.csv'
+    img_pairs_test = f'{dataset_root}/test_img_pairs1.csv'
     pose_maps_dir_train = f'{dataset_root}/train_pose_maps'
     pose_maps_dir_test = f'{dataset_root}/test_pose_maps'
 
