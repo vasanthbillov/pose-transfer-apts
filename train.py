@@ -6,10 +6,11 @@ from torch.utils.tensorboard import SummaryWriter
 from data.dataloader import create_dataloader
 from models.pose_transfer_model import PoseTransferModel
 
-
+import pandas as pd
 # configurations
 # -----------------------------------------------------------------------------
-root_path = 'D:/LjmuMSc/Projects/Github/PoseTransfer_MS_RnD'
+# root_path = 'D:/LjmuMSc/Projects/Github/PoseTransfer_MS_RnD'
+root_path = '/home/ubuntu/vasanth/pose-transfer-repo'
 dataset_name = 'deepfashion'
 
 dataset_root = f'{root_path}/datasets/{dataset_name}/'
@@ -21,13 +22,13 @@ pose_maps_dir_test = f'{dataset_root}/test_pose_maps'
 
 gpu_ids = [0]
 
-batch_size_train = 4
-batch_size_test = 4
-n_epoch = 10
+batch_size_train = 8
+batch_size_test = 8
+n_epoch = 100
 out_freq = 500
 
-ckpt_id = None
-ckpt_dir = None
+ckpt_id = 71000
+ckpt_dir = '/home/ubuntu/vasanth/pose-transfer-repo/output/deepfashion/ckpt/2023-05-08-06-22-25'
 
 run_info = ''
 out_path = f'{root_path}/output/{dataset_name}'
@@ -73,7 +74,10 @@ if ckpt_id and ckpt_dir:
 n_batch = len(train_dataloader)
 w_batch = len(str(n_batch))
 w_epoch = len(str(n_epoch))
-n_iters = 0
+n_iters = 71000
+
+result_df = pd.DataFrame()
+res = []
 
 for epoch in range(n_epoch):
     for batch, data in enumerate(train_dataloader):
@@ -84,8 +88,10 @@ for epoch in range(n_epoch):
         loss_G = losses['lossG']
         loss_D = losses['lossD']
         time_1 = time.time()
-        print(f'[TRAIN] Epoch: {epoch+1:{w_epoch}d}/{n_epoch} | Batch: {batch+1:{w_batch}d}/{n_batch} |',
-              f'LossG: {loss_G:7.4f} | LossD: {loss_D:7.4f} | Time: {round(time_1-time_0, 2):.2f} sec |')
+
+        print_data =f'[TRAIN] Epoch: {epoch+1:{w_epoch}d}/{n_epoch} | Batch: {batch+1:{w_batch}d}/{n_batch} |', f'LossG: {loss_G:7.4f} | LossD: {loss_D:7.4f} | Time: {round(time_1-time_0, 2):.2f} sec |'
+        res.append(print_data)
+        print(print_data)
         
         if (n_iters % out_freq == 0) or (batch+1 == n_batch and epoch+1 == n_epoch):
             model.save_networks(f'{out_path}/ckpt/{timestamp}{infostamp}', n_iters, verbose=True)
@@ -97,3 +103,8 @@ for epoch in range(n_epoch):
             logger.add_image(f'Iteration_{n_iters}', visuals, n_iters)
         
         n_iters += 1
+
+
+result_df['result'] = res
+
+result_df.to_csv('res.csv')
