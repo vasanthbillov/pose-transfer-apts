@@ -9,21 +9,33 @@ from models.pose_transfer_model import PoseTransferModel
 
 # configurations
 # -----------------------------------------------------------------------------
-dataset_name = 'DeepFashion'
+# dataset_name = 'DeepFashion'
 
-dataset_root = f'../datasets/{dataset_name}'
-img_pairs = f'{dataset_root}/test_img_pairs.csv'
+# dataset_root = f'../datasets/{dataset_name}'
+# img_pairs = f'{dataset_root}/test_img_pairs.csv'
+# pose_maps_dir = f'{dataset_root}/test_pose_maps'
+
+
+##
+root_path = 'D:/LjmuMSc/Projects/Github/PoseTransfer_MS_RnD'
+dataset_name = 'deepfashion'
+
+dataset_root = f'{root_path}/datasets/{dataset_name}/'
+img_pairs = f'{dataset_root}/test_img_pairs1.csv'
 pose_maps_dir = f'{dataset_root}/test_pose_maps'
+
 
 gpu_ids = [0]
 
-batch_size = 32
+batch_size = 1
 
 run_id = 'pretrained'
-ckpt_ids = [260500]
+ckpt_ids = [62500]
 
-ckpt_dir = f'../output/{dataset_name}/ckpt/{run_id}'
-save_dir = f'../output/{dataset_name}/test/{run_id}'
+
+# ckpt_dir = f'{root_path}/My_pretrained_model/{dataset_name}/ckpt/{run_id}'
+ckpt_dir = f'{root_path}/My_pretrained_model/v1/{run_id}'
+save_dir = f'{root_path}/{dataset_name}/test/{run_id}'
 # -----------------------------------------------------------------------------
 
 
@@ -85,9 +97,10 @@ for ckpt_id in ckpt_ids:
         for batch, data in enumerate(dataloader):
             model.set_inputs(data)
             real_map_AB = torch.cat((model.real_map_A, model.real_map_B), dim=1)
+            real_seg_AB = torch.cat((model.real_img_A_seg, model.real_img_B_seg), dim=1)
             with torch.no_grad():
                 start = time.time()
-                model.fake_img_B = model.netG(model.real_img_A, real_map_AB)
+                model.fake_img_B = model.netG(model.real_img_A, real_map_AB,real_seg_AB)
                 runtimes.append(time.time() - start)
             
             for i in range(model.fake_img_B.size(0)):

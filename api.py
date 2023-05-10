@@ -23,7 +23,9 @@ from urllib.request import urlopen
 
 
 CHECKPOINT_URL = 'https://www.dropbox.com/s/iqrzd6lypguxw5i/pose_transfer_coco_keypoints_deepfashion_netG_iter_260500.pth?dl=1'
-CHECKPOINT_DIR = os.path.join(os.path.expanduser('~'), '.cache/torch/checkpoints/')
+# CHECKPOINT_DIR = os.path.join(os.path.expanduser('~'), '.cache/torch/checkpoints/')
+# version = 'v1'
+CHECKPOINT_DIR = 'D:/LjmuMSc/Projects/Github/PoseTransfer_MS_RnD/My_pretrained_model/v1/pretrained/netG_62500.pth'
 
 
 def _download_file(url, path, progress=True):
@@ -53,15 +55,18 @@ def _download_file(url, path, progress=True):
 
 
 def _load_checkpoint(model, checkpoint_url, checkpoint_dir, ignore_cache=False, progress=True):
-    if not os.path.isdir(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
-    urlparts = urlparse(checkpoint_url)
-    filename = os.path.basename(urlparts.path.split('/')[-1])
-    cached_file = os.path.join(checkpoint_dir, filename)
-    if not os.path.isfile(cached_file) or ignore_cache:
-        print(f'Downloading: "{checkpoint_url}" to {cached_file}')
-        _download_file(checkpoint_url, cached_file, progress)
-    model.load_state_dict(torch.load(cached_file))
+    # if not os.path.isdir(checkpoint_dir):
+    #     os.makedirs(checkpoint_dir)
+    # urlparts = urlparse(checkpoint_url)
+    # filename = os.path.basename(urlparts.path.split('/')[-1])
+    # cached_file = os.path.join(checkpoint_dir, filename)
+
+    # if not os.path.isfile(cached_file) or ignore_cache:
+    #     print(f'Downloading: "{checkpoint_url}" to {cached_file}')
+    #     _download_file(checkpoint_url, cached_file, progress)
+
+    # model.load_state_dict(torch.load(cached_file))
+    model.load_state_dict(torch.load(checkpoint_dir))
     return model
 
 
@@ -98,11 +103,12 @@ class ResidualBlock(nn.Module):
         y = self.layers(x) + x
         return y
 
-
 class NetG(nn.Module):
     
-    def __init__(self, in1_channels, in2_channels, out_channels, ngf=64):
+    def __init__(self, in1_channels, in2_channels,in3_channels, out_channels, ngf=64):
         super(NetG, self).__init__()
+
+        
         
         self.in1_conv1 = self.inconv(in1_channels, ngf)
         self.in1_down1 = self.down2x(ngf, ngf*2)
@@ -115,6 +121,12 @@ class NetG(nn.Module):
         self.in2_down2 = self.down2x(ngf*2, ngf*4)
         self.in2_down3 = self.down2x(ngf*4, ngf*8)
         self.in2_down4 = self.down2x(ngf*8, ngf*16)
+
+        self.in3_conv1 = self.inconv(in3_channels, ngf)
+        self.in3_down1 = self.down2x(ngf, ngf*2)
+        self.in3_down2 = self.down2x(ngf*2, ngf*4)
+        self.in3_down3 = self.down2x(ngf*4, ngf*8)
+        self.in3_down4 = self.down2x(ngf*8, ngf*16)
         
         self.out_up1 = self.up2x(ngf*16, ngf*8)
         self.out_up2 = self.up2x(ngf*8, ngf*4)
@@ -155,29 +167,41 @@ class NetG(nn.Module):
             ResidualBlock(out_channels)
         )
     
-    def forward(self, x1, x2):
+    def forward(self, x1, x2, x3):
+        print(x1.shape)
+        print(x2.shape)
+        print(x3.shape)
         x1_c1 = self.in1_conv1(x1)
         x1_d1 = self.in1_down1(x1_c1)
         x1_d2 = self.in1_down2(x1_d1)
         x1_d3 = self.in1_down3(x1_d2)
         x1_d4 = self.in1_down4(x1_d3)
         
+        # Heat maps(joints)
         x2_c1 = self.in2_conv1(x2)
         x2_d1 = self.in2_down1(x2_c1)
         x2_d2 = self.in2_down2(x2_d1)
         x2_d3 = self.in2_down3(x2_d2)
         x2_d4 = self.in2_down4(x2_d3)
+
+        # Parsing maps
+        x3_c1 = self.in3_conv1(x3)
+        x3_d1 = self.in3_down1(x3_c1)
+        x3_d2 = self.in3_down2(x3_d1)
+        x3_d3 = self.in3_down3(x3_d2)
+        x3_d4 = self.in3_down4(x3_d3)
         
-        y = x1_d4 * torch.sigmoid(x2_d4)
+        y = (x1_d4 * torch.sigmoid(x2_d4)) * torch.sigmoid(x3_d4)
         y = self.out_up1(y)
-        y = y * torch.sigmoid(x2_d3)
+        y = (y * torch.sigmoid(x2_d3)) * torch.sigmoid(x3_d3)
         y = self.out_up2(y)
-        y = y * torch.sigmoid(x2_d2)
+        y = (y * torch.sigmoid(x2_d2)) * torch.sigmoid(x3_d2)
         y = self.out_up3(y)
-        y = y * torch.sigmoid(x2_d1)
+        y = (y * torch.sigmoid(x2_d1)) * torch.sigmoid(x3_d1)
         y = self.out_up4(y)
         y = self.out_conv1(y)
-        
+
+        print('y shape: ', y.shape)
         return y
 
 
@@ -185,7 +209,7 @@ class Pose2Pose(object):
     
     def __init__(self, pretrained=False, ignore_cache=False, checkpoint=None):
         self.openpose = BodyPoseEstimator(pretrained=True)
-        self.renderer = NetG(3, 36, 3).eval()
+        self.renderer = NetG(3, 36, 6, 3).eval()
         if checkpoint is not None:
             self.renderer.load_state_dict(torch.load(checkpoint))
         elif pretrained:
@@ -232,14 +256,15 @@ class Pose2Pose(object):
         return x
     
     @torch.no_grad()
-    def _transfer_pose(self, imgA, mapAB):
+    def _transfer_pose(self, imgA, mapAB, segAB):
         if torch.cuda.is_available():
-            imgA, mapAB = imgA.cuda(), mapAB.cuda()
-        return self.renderer(imgA, mapAB).cpu()
+            imgA, mapAB, segAB = imgA.cuda(), mapAB.cuda(), segAB.cuda()
+        return self.renderer(imgA, mapAB, segAB).cpu()
     
-    def transfer_as(self, condition, target_pose_reference):
+    def transfer_as(self, condition, target_pose_reference ):
         imgA = self._resize_and_pad_image(condition.convert('RGB'))
         kptA = self._estimate_keypoints(imgA)
+
         mapA = self._keypoints2heatmaps(kptA)
         imgB = self._resize_and_pad_image(target_pose_reference.convert('RGB'))
         kptB = self._estimate_keypoints(imgB)
@@ -249,6 +274,34 @@ class Pose2Pose(object):
         mapB_t = self._transform_input(mapB, normalize=False).unsqueeze(0)
         mapAB_t = torch.cat((mapA_t, mapB_t), dim=1)
         out = self._transfer_pose(imgA_t, mapAB_t).squeeze()
+        out = self._transform_output(out, denormalize=True).convert(condition.mode)
+        crop_size = (256, min((256 * target_pose_reference.width // target_pose_reference.height), 176))
+        return T.CenterCrop(crop_size)(out)
+
+    def temp_transfer_as(self, condition, target_pose_reference, condition_seg, target_seg):
+        imgA = self._resize_and_pad_image(condition.convert('RGB'))
+        kptA = self._estimate_keypoints(imgA)
+        mapA = self._keypoints2heatmaps(kptA)
+        segA = condition_seg
+
+        imgB = self._resize_and_pad_image(target_pose_reference.convert('RGB'))
+        kptB = self._estimate_keypoints(imgB)
+        mapB = self._keypoints2heatmaps(kptB)
+        segB = target_seg
+
+        imgA_t = self._transform_input(imgA, normalize=True).unsqueeze(0)
+        mapA_t = self._transform_input(mapA, normalize=False).unsqueeze(0)
+        mapB_t = self._transform_input(mapB, normalize=False).unsqueeze(0)
+
+        segA_t = self._transform_input(segA, normalize=False).unsqueeze(0)
+        segB_t = self._transform_input(segB, normalize=False).unsqueeze(0)
+
+        mapAB_t = torch.cat((mapA_t, mapB_t), dim=1)
+        segAB_t = torch.cat((segA_t, segB_t), dim=1)
+
+        out = self._transfer_pose(imgA_t, mapAB_t, segAB_t).squeeze()
+
+
         out = self._transform_output(out, denormalize=True).convert(condition.mode)
         crop_size = (256, min((256 * target_pose_reference.width // target_pose_reference.height), 176))
         return T.CenterCrop(crop_size)(out)

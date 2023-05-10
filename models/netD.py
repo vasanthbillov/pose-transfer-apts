@@ -1,5 +1,6 @@
 import torch.nn as nn
 
+from torchsummary import summary
 
 class NetD(nn.Module):
     
@@ -27,3 +28,8 @@ class NetD(nn.Module):
     
     def forward(self, x):
         return self.layers(x)
+    
+
+if __name__=='__main__':
+    netG = NetD(6)
+    summary(netG)
